@@ -136,12 +136,12 @@ class NetworkUtilizationMonitor(app_manager.RyuApp):
 
     def _monitor(self):
         """
-        Infinite loop to poll every switch for port statistics every 5 seconds.
+        Infinite loop to poll every switch for port statistics every 3 seconds.
         """
         while True:
             for dp in self.datapaths.values():
                 self._request_stats(dp)
-            hub.sleep(5)
+            hub.sleep(3)
 
     def _request_stats(self, datapath):
         """
@@ -162,7 +162,7 @@ class NetworkUtilizationMonitor(app_manager.RyuApp):
         dpid = ev.msg.datapath.id
         
         # Display header for the utilization table
-        print(f"\n[Switch {dpid:016x}] Utilization Table (Interval: 5s)")
+        print(f"\n[Switch {dpid:016x}] Utilization Table (Interval: 3s)")
         print(f"{'Port':<8} {'RX (Mbps)':<12} {'TX (Mbps)':<12}")
         print("-" * 35)
 
