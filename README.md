@@ -51,6 +51,19 @@ ryu-manager monitor_controller.py
 sudo python3 topology.py
 ```
 
+## Web Dashboard (Obsidian Core)
+This project includes a real-time web interface built with vanilla JS and CSS.
+
+### Accessing the Dashboard
+1. Ensure the Ryu controller is running (`ryu-manager monitor_controller.py`).
+2. Open the `dashboard.html` file directly in any modern web browser.
+3. The dashboard will automatically connect to `http://localhost:8080/stats/utilization` and update every 3 seconds.
+
+### Dashboard Features
+- **Switch Cards**: Each switch is displayed as a separate industrial-style card.
+- **Real-time Gauges**: Visual progress bars show bandwidth utilization relative to the 10 Mbps link limit.
+- **Dynamic Indicators**: Active ports pulse with Electric Cyan (RX) or Solar Amber (TX) highlights when traffic is detected.
+
 ## Test Scenarios
 
 ### Scenario 1: Idle State vs. Single Stream
