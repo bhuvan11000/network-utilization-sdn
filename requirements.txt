@@ -1,6 +1,13 @@
-ryu @ git+https://github.com/faucetsdn/ryu.git
+# Install dependencies first:
+# pip install eventlet==0.33.3 dnspython==2.2.1 six webob msgpack-python routes tinyrpc ovs
+# Then install ryu:
+# pip install --no-deps "ryu @ git+https://github.com/faucetsdn/ryu.git"
+
 eventlet==0.33.3
-dnspython>=2.2.1
+dnspython==2.2.1
 six
 webob
 msgpack-python
+routes
+tinyrpc
+ovs
