@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obsidian Core | SDN Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a0a0c;
+            --bg-card: #121216;
+            --accent-cyan: #00f2ff;
+            --accent-amber: #ffb300;
+            --text-main: #e0e0e6;
+            --text-dim: #707080;
+            --border: #22222a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            overflow-x: hidden;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+        }
+
+        .status-pill {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border: 1px solid var(--accent-cyan);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 2rem;
+        }
+
+        .switch-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 1.5rem;
+            position: relative;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .switch-card:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        .switch-id {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .port-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .port-row {
+            display: grid;
+            grid-template-columns: 60px 1fr 1fr;
+            align-items: center;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 2px;
+            border-left: 2px solid transparent;
+        }
+
+        .port-row.active-rx { border-left-color: var(--accent-cyan); }
+        .port-row.active-tx { border-right-color: var(--accent-amber); }
+
+        .port-label {
+            font-weight: bold;
+            color: var(--text-dim);
+        }
+
+        .stat-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+        }
+
+        .rx-val { color: var(--accent-cyan); }
+        .tx-val { color: var(--accent-amber); }
+
+        .gauge-bg {
+            height: 4px;
+            background: #1a1a20;
+            width: 80%;
+            margin-top: 8px;
+            position: relative;
+        }
+
+        .gauge-fill {
+            height: 100%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .rx-fill { background: var(--accent-cyan); box-shadow: 0 0 10px var(--accent-cyan); }
+        .tx-fill { background: var(--accent-amber); box-shadow: 0 0 10px var(--accent-amber); }
+
+        .empty-msg {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 5rem;
+            color: var(--text-dim);
+            border: 1px dashed var(--border);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>Obsidian Core</h1>
+            <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 5px;">SDN Network Utilization Interface v1.0</p>
+        </div>
+        <div class="status-pill">
+            <div class="pulse"></div>
+            Live Polling: 3.0s
+        </div>
+    </header>
+
+    <div id="dashboard">
+        <div class="empty-msg">Waiting for controller data... Ensure ryu-manager is running.</div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080/stats/utilization';
+
+        async function updateDashboard() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                const container = document.getElementById('dashboard');
+
+                if (Object.keys(data).length === 0) return;
+
+                container.innerHTML = '';
+
+                for (const [dpid, ports] of Object.entries(data)) {
+                    const card = document.createElement('div');
+                    card.className = 'switch-card';
+                    
+                    let portsHtml = '';
+                    for (const [portNo, stats] of Object.entries(ports)) {
+                        const rxWidth = Math.min((stats.rx / 10) * 100, 100);
+                        const txWidth = Math.min((stats.tx / 10) * 100, 100);
+                        
+                        portsHtml += `
+                            <div class="port-row ${stats.rx > 0.1 ? 'active-rx' : ''} ${stats.tx > 0.1 ? 'active-tx' : ''}">
+                                <div class="port-label">P${portNo}</div>
+                                <div class="stat-group">
+                                    <span class="stat-label">RX Downlink</span>
+                                    <span class="stat-value rx-val">${stats.rx.toFixed(2)} Mbps</span>
+                                    <div class="gauge-bg"><div class="gauge-fill rx-fill" style="width: ${rxWidth}%"></div></div>
+                                </div>
+                                <div class="stat-group">
+                                    <span class="stat-label">TX Uplink</span>
+                                    <span class="stat-value tx-val">${stats.tx.toFixed(2)} Mbps</span>
+                                    <div class="gauge-bg"><div class="gauge-fill tx-fill" style="width: ${txWidth}%"></div></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    card.innerHTML = `
+                        <span class="switch-id">Switch Identifier: ${dpid}</span>
+                        <div class="port-grid">${portsHtml}</div>
+                    `;
+                    container.appendChild(card);
+                }
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        }
+
+        setInterval(updateDashboard, 3000);
+        updateDashboard();
+    </script>
+</body>
+</html>
