@@ -163,6 +163,7 @@ class MonitorRestController(ControllerBase):
         """
         Returns utilization stats for all switches as JSON.
         """
-        body = json.dumps(self.monitor_app.utilization)
+        # Encode string to bytes to avoid "text value without a charset" error
+        body = json.dumps(self.monitor_app.utilization).encode('utf-8')
         return Response(content_type='application/json', body=body, 
                         headerlist=[('Access-Control-Allow-Origin', '*')])
