@@ -1,6 +1,7 @@
 # Ryu Controller for measuring real-time bandwidth utilization (Mbps).
-# IMPORTANT: This requires eventlet==0.30.2 to avoid ImportError: 'ALREADY_HANDLED'
-# To fix, run: pip install eventlet==0.30.2
+# NOTE: For Python 3.10+, use the Faucet SDN fork and eventlet 0.33.3:
+# pip install "ryu @ git+https://github.com/faucetsdn/ryu.git"
+# pip install eventlet==0.33.3
 
 from ryu.base import app_manager
 from ryu.controller import ofp_event
