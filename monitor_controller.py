@@ -1,7 +1,12 @@
 # Ryu Controller for measuring real-time bandwidth utilization (Mbps).
-# NOTE: For Python 3.10+, use the Faucet SDN fork and eventlet 0.33.3:
-# pip install "ryu @ git+https://github.com/faucetsdn/ryu.git"
-# pip install eventlet==0.33.3
+
+# --- Python 3.10+ Compatibility Fixes ---
+import collections
+# Fix for AttributeError: module 'collections' has no attribute 'MutableMapping'
+if not hasattr(collections, 'MutableMapping'):
+    import collections.abc
+    collections.MutableMapping = collections.abc.MutableMapping
+# ----------------------------------------
 
 from ryu.base import app_manager
 from ryu.controller import ofp_event

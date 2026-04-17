@@ -1,5 +1,6 @@
 ryu @ git+https://github.com/faucetsdn/ryu.git
 eventlet==0.33.3
+dnspython>=2.2.1
 six
 webob
 msgpack-python
