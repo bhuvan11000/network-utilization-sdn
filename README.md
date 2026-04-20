@@ -72,10 +72,32 @@ Simply open `dashboard.html` in your browser. It will automatically connect to t
 
 ## 🧪 Testing Scenarios
 
-### Scenario: Single Stream Saturation
-1. In the Mininet CLI, start a server on `h3`: `h3 iperf -s &`
-2. Run a client on `h1`: `h1 iperf -c 10.0.0.3 -t 20`
-3. **Expectation**: The terminal and web dashboard should show utilization jumping to ~9.4 Mbps (near the 10 Mbps limit).
+### Test Case 1: Scalability & Topology Verification
+**Goal:** Verify that the dynamic topology correctly builds and that the terminal displays multiple switches horizontally.
+1. **Launch:** `sudo python3 topology.py --switches 4 --hosts 8`
+2. **Verification:** Confirm Mininet shows 4 switches (`s1-s4`) and 8 hosts (`h1-h8`). The Ryu terminal should display **4 tables** side-by-side.
+
+### Test Case 2: Real-Time Bandwidth Accuracy
+**Goal:** Confirm the Mbps calculation matches a known load.
+1. **Launch:** `sudo python3 topology.py --switches 2 --hosts 4`
+2. **Traffic:** 
+   - Mininet: `h1 iperf -s &`
+   - Mininet: `h2 iperf -c 10.0.0.1 -t 30 -u -b 5M` (Sends a 5 Mbps UDP stream).
+3. **Expectation:** Both Terminal and Dashboard should show approximately **5.0 Mbps** for the corresponding ports.
+
+### Test Case 3: Multi-Hop Bottleneck Analysis
+**Goal:** Observe how traffic propagates through the switch chain.
+1. **Launch:** `sudo python3 topology.py --switches 3 --hosts 6`
+2. **Traffic:** 
+   - Mininet: `h5 iperf -s &`
+   - Mininet: `h1 iperf -c 10.0.0.5 -t 30`
+3. **Expectation:** You should see activity on `s1` (Port 1), `s2` (backbone ports), and `s3` (Port 1/h5), demonstrating full network traversal.
+
+### Test Case 4: Dashboard Stress Test
+**Goal:** Ensure the web dashboard's visual indicators respond correctly to multiple simultaneous streams.
+1. **Launch:** `sudo python3 topology.py --switches 2 --hosts 4`
+2. **Traffic:** Start servers on `h3` and `h4`. Simultaneously run `h1 iperf -c h3 -b 4M` and `h2 iperf -c h4 -b 4M`.
+3. **Expectation:** All active ports should pulse Cyan/Amber, and gauges should reflect the combined ~80% link utilization.
 
 ---
 
