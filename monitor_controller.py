@@ -101,12 +101,57 @@ class NetworkUtilizationMonitor(app_manager.RyuApp):
             for dp in self.datapaths.values():
                 self._request_stats(dp)
             hub.sleep(3)
+            self._print_stats_side_by_side()
 
     def _request_stats(self, datapath):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         req = parser.OFPPortStatsRequest(datapath, 0, ofproto.OFPP_ANY)
         datapath.send_msg(req)
+
+    def _print_stats_side_by_side(self):
+        if not self.utilization:
+            return
+
+        dpids = sorted(self.utilization.keys())
+        # Filter out switches that haven't reported yet
+        active_dpids = [d for d in dpids if self.utilization[d]]
+        if not active_dpids:
+            return
+
+        # Prepare headers
+        header = ""
+        sub_header = ""
+        separator = ""
+        col_width = 40
+
+        for dpid in active_dpids:
+            # Show last 4 digits of DPID for brevity in header
+            header += f" [Switch {dpid[-4:]}]".ljust(col_width)
+            sub_header += f"{'Port':<8} {'RX (Mbps)':<12} {'TX (Mbps)':<12}".ljust(col_width)
+            separator += ("-" * 35).ljust(col_width)
+
+        print("\n" + header)
+        print(sub_header)
+        print(separator)
+
+        # Collect all port numbers for each switch to iterate through rows
+        switch_ports = {d: sorted(self.utilization[d].keys(), key=int) for d in active_dpids}
+        max_ports = max(len(ports) for ports in switch_ports.values())
+
+        for i in range(max_ports):
+            row = ""
+            for dpid in active_dpids:
+                ports = switch_ports[dpid]
+                if i < len(ports):
+                    p_no = ports[i]
+                    stats = self.utilization[dpid][p_no]
+                    rx, tx = stats['rx'], stats['tx']
+                    row += f"{p_no:<8} {rx:<12.4f} {tx:<12.4f}".ljust(col_width)
+                else:
+                    row += "".ljust(col_width)
+            print(row)
+        print(separator)
 
     @set_ev_cls(ofp_event.EventOFPPortStatsReply, MAIN_DISPATCHER)
     def _port_stats_reply_handler(self, ev):
@@ -116,11 +161,6 @@ class NetworkUtilizationMonitor(app_manager.RyuApp):
         
         self.utilization.setdefault(dpid_str, {})
         
-        # CLI Output
-        print(f"\n[Switch {dpid_str}] Utilization Table (Interval: 3s)")
-        print(f"{'Port':<8} {'RX (Mbps)':<12} {'TX (Mbps)':<12}")
-        print("-" * 35)
-
         for stat in sorted(body, key=lambda attr: attr.port_no):
             if stat.port_no == ev.msg.datapath.ofproto.OFPP_LOCAL:
                 continue
@@ -137,18 +177,15 @@ class NetworkUtilizationMonitor(app_manager.RyuApp):
                 rx_mbps = (curr_rx_bytes - prev_rx_bytes) * 8 / (delta_time * 1e6)
                 tx_mbps = (curr_tx_bytes - prev_tx_bytes) * 8 / (delta_time * 1e6)
                 
-                # Store for REST API
+                # Store for REST API and terminal display
                 self.utilization[dpid_str][str(port_no)] = {
                     'rx': round(rx_mbps, 4),
                     'tx': round(tx_mbps, 4)
                 }
-                print(f"{port_no:<8} {rx_mbps:<12.4f} {tx_mbps:<12.4f}")
             else:
                 self.utilization[dpid_str][str(port_no)] = {'rx': 0, 'tx': 0}
-                print(f"{port_no:<8} {'Initializing':<12} {'Initializing':<12}")
 
             self.stats[key] = (curr_rx_bytes, curr_tx_bytes, curr_time)
-        print("-" * 35)
 
 class MonitorRestController(ControllerBase):
     """
