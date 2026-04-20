@@ -1,92 +1,86 @@
-# Project #19: Network Utilization Monitor (SDN)
+# SDN Real-Time Network Utilization Monitor
 
-## Problem Statement
-Implement an SDN-based network monitor that calculates and displays real-time bandwidth utilization (in Mbps) across all active ports of OpenFlow 1.3 switches. The controller periodically polls each switch for port byte counters and computes throughput based on the delta between consecutive polls.
+A high-performance Software-Defined Networking (SDN) application that provides real-time bandwidth monitoring and visualization across dynamic network topologies. Built using the **Ryu SDN Framework**, **Mininet**, and **OpenFlow 1.3**.
 
-## Topology Diagram (ASCII)
-```text
-           (SDN Controller: Ryu)
-                  |
-         [Switch s1]-------[Switch s2]
-          /      \          /      \
-      [h1]      [h2]      [h3]      [h4]
-    10.0.0.1  10.0.0.2  10.0.0.3  10.0.0.4
+---
 
-* All links use TCLink with bw=10 (10 Mbps)
-```
+## 🚀 Key Features
 
-## Setup and Environment (Critical)
-This project is optimized for **Ubuntu 22.04** and **Python 3.10**. Standard Ryu has compatibility issues with newer versions of `eventlet` and `dnspython`. Follow these exact steps to ensure a working environment.
+- **Dynamic Topology Support**: Deploy linear switch chains of any size with customizable host counts via CLI.
+- **Real-Time Mbps Calculation**: High-precision bandwidth throughput monitoring (RX/TX) using 3-second polling intervals.
+- **Horizontal Terminal Dashboard**: Optimized CLI output showing multiple switch statistics side-by-side.
+- **Obsidian Core Web Dashboard**: A modern, industrial-themed web interface for visual traffic monitoring.
+- **L2 Learning Logic**: Fully functional MAC-learning switch implementation with proactive flow installation.
 
-### 1. Create the Virtual Environment
+---
+
+## 🛠️ Architecture
+
+### Components
+1. **Controller (`monitor_controller.py`)**: 
+   - Managed by Ryu.
+   - Handles `PacketIn` events for MAC learning.
+   - Periodically polls `PortStats` to compute Mbps.
+   - Exposes a REST API at `:8080/stats/utilization`.
+2. **Topology (`topology.py`)**: 
+   - Managed by Mininet.
+   - Utilizes `TCLink` to enforce hardware-level bandwidth constraints (default: 10 Mbps).
+3. **Web Interface (`dashboard.html`)**: 
+   - Vanilla JS/CSS client that visualizes traffic through real-time gauges.
+
+---
+
+## 💻 Installation & Setup
+
+### Prerequisites
+- **Ubuntu 22.04** (Recommended)
+- **Python 3.10+**
+- **Mininet & Open vSwitch** installed (`sudo apt install mininet`)
+
+### 1. Environment Configuration
 ```bash
+# Create and activate virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
-```
 
-### 2. Manual Installation Strategy
-Due to dependency conflicts in the standard Ryu distribution, use the following manual installation sequence:
-```bash
-# Uninstall any existing conflicting versions
-pip uninstall -y ryu eventlet dnspython
-
-# Install working underlying dependencies
+# Install dependencies (specific versions required for Ryu stability)
 pip install eventlet==0.33.3 dnspython==2.2.1 six webob msgpack-python routes tinyrpc ovs
-
-# Install the patched Faucet SDN Ryu fork (ignores dependency checks)
 pip install --no-deps "ryu @ git+https://github.com/faucetsdn/ryu.git"
 ```
 
-## Execution Steps
+---
 
-### Terminal 1: Start the Ryu Controller
+## 🚦 Execution
+
+### Step 1: Start the Ryu Controller
 ```bash
 source .venv/bin/activate
 ryu-manager monitor_controller.py
 ```
 
-### Terminal 2: Start the Mininet Topology
+### Step 2: Launch the Topology
+You can now define your network size at runtime:
 ```bash
-# Note: Do NOT run this inside the venv. Use system Python.
-sudo python3 topology.py
+# Example: 3 switches with 2 hosts each
+sudo python3 topology.py --switches 3 --hosts 2
 ```
 
-## Web Dashboard (Obsidian Core)
-This project includes a real-time web interface built with vanilla JS and CSS.
+### Step 3: View the Dashboard
+Simply open `dashboard.html` in your browser. It will automatically connect to the local controller.
 
-### Accessing the Dashboard
-1. Ensure the Ryu controller is running (`ryu-manager monitor_controller.py`).
-2. Open the `dashboard.html` file directly in any modern web browser.
-3. The dashboard will automatically connect to `http://localhost:8080/stats/utilization` and update every 3 seconds.
+---
 
-### Dashboard Features
-- **Switch Cards**: Each switch is displayed as a separate industrial-style card.
-- **Real-time Gauges**: Visual progress bars show bandwidth utilization relative to the 10 Mbps link limit.
-- **Dynamic Indicators**: Active ports pulse with Electric Cyan (RX) or Solar Amber (TX) highlights when traffic is detected.
+## 🧪 Testing Scenarios
 
-## Test Scenarios
+### Scenario: Single Stream Saturation
+1. In the Mininet CLI, start a server on `h3`: `h3 iperf -s &`
+2. Run a client on `h1`: `h1 iperf -c 10.0.0.3 -t 20`
+3. **Expectation**: The terminal and web dashboard should show utilization jumping to ~9.4 Mbps (near the 10 Mbps limit).
 
-### Scenario 1: Idle State vs. Single Stream
-1. Verify the controller table shows `0.0000 Mbps` for all ports.
-2. In Mininet CLI: `h3 iperf -s &`
-3. In Mininet CLI: `h1 iperf -c 10.0.0.3 -t 20`
-4. **Observation**: Port utilization should jump to ~9.4 Mbps in the controller terminal.
+---
 
-### Scenario 2: Shared Link Bottleneck
-1. In Mininet CLI: `h3 iperf -s &` and `h4 iperf -s &`
-2. Run simultaneous tests:
-   - `h1 iperf -c 10.0.0.3 -t 30 &`
-   - `h2 iperf -c 10.0.0.4 -t 30 &`
-3. **Observation**: Since the `s1-s2` link is shared (10 Mbps total), both streams will show reduced bandwidth (approx 4-5 Mbps each) in the utilization table.
-
-## Validation Commands
-- **Check Flows**: `sudo ovs-ofctl -O OpenFlow13 dump-flows s1`
-- **Check MACs**: `mininet> pingall`
-- **Switch Config**: `sudo ovs-vsctl show`
-
-## Rubric Mapping
-- **Match-action**: `add_flow` method in `monitor_controller.py`
-- **MAC Learning**: `_packet_in_handler` in `monitor_controller.py`
-- **Polling Loop**: `hub.spawn` in `__init__`
-- **Mbps Math**: `_port_stats_reply_handler` using 3s delta time.
-- **TCLink**: `UtilizationTopo` class in `topology.py`.
+## 📜 Technical Specs
+- **Protocol**: OpenFlow 1.3
+- **Polling Interval**: 3.0 seconds
+- **Default Bandwidth**: 10 Mbps per link
+- **API Endpoint**: `GET /stats/utilization`
