@@ -61,8 +61,8 @@ ryu-manager monitor_controller.py
 ### Step 2: Launch the Topology
 You can now define your network size at runtime:
 ```bash
-# Example: 3 switches with 2 hosts each
-sudo python3 topology.py --switches 3 --hosts 2
+# Example: 3 switches with 6 hosts total (2 per switch)
+sudo python3 topology.py --switches 3 --hosts 6
 ```
 
 ### Step 3: View the Dashboard
