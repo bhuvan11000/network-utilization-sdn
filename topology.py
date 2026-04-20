@@ -16,21 +16,27 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel
 
 class UtilizationTopo(Topo):
-    def build(self, n_switches=2, hosts_per_switch=2):
+    def build(self, n_switches=2, n_hosts=4):
         """
-        Builds a linear topology of switches, each with a fixed number of hosts.
-        All links are constrained to 10 Mbps.
+        Builds a linear topology of switches, distributing a total number of hosts
+        across them. All links are constrained to 10 Mbps.
         """
         switches = []
         host_count = 1
+        
+        # Calculate how many hosts to put on each switch
+        hosts_per_sw = n_hosts // n_switches
+        extra_hosts = n_hosts % n_switches
 
         for i in range(1, n_switches + 1):
             # 1. Add switch
             dpid = f"{i:016x}"
             sw = self.addSwitch(f's{i}', dpid=dpid)
             
-            # 2. Add hosts for this switch
-            for _ in range(hosts_per_switch):
+            # 2. Determine number of hosts for this specific switch
+            current_sw_hosts = hosts_per_sw + (1 if i <= extra_hosts else 0)
+            
+            for _ in range(current_sw_hosts):
                 h = self.addHost(f'h{host_count}', ip=f'10.0.0.{host_count}')
                 self.addLink(h, sw, cls=TCLink, bw=10)
                 host_count += 1
@@ -41,9 +47,9 @@ class UtilizationTopo(Topo):
             
             switches.append(sw)
 
-def run_topology(n_switches, hosts_per_switch):
+def run_topology(n_switches, n_hosts):
     # Create the network
-    topo = UtilizationTopo(n_switches=n_switches, hosts_per_switch=hosts_per_switch)
+    topo = UtilizationTopo(n_switches=n_switches, n_hosts=n_hosts)
     net = Mininet(
         topo=topo,
         controller=lambda name: RemoteController(name, ip='127.0.0.1', port=6633),
@@ -64,7 +70,7 @@ def run_topology(n_switches, hosts_per_switch):
     net.pingAll()
 
     # Open the Mininet CLI
-    print(f"\n*** Network ready ({n_switches} switches, {n_switches * hosts_per_switch} hosts).")
+    print(f"\n*** Network ready ({n_switches} switches, {n_hosts} hosts).")
     CLI(net)
 
     # Stop the network
@@ -73,8 +79,8 @@ def run_topology(n_switches, hosts_per_switch):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dynamic SDN Topology for Utilization Monitoring')
     parser.add_argument('--switches', type=int, default=2, help='Number of switches in linear chain (default: 2)')
-    parser.add_argument('--hosts', type=int, default=2, help='Hosts per switch (default: 2)')
+    parser.add_argument('--hosts', type=int, default=4, help='Total number of hosts in the network (default: 4)')
     args = parser.parse_args()
 
     setLogLevel('info')
-    run_topology(n_switches=args.switches, hosts_per_switch=args.hosts)
+    run_topology(n_switches=args.switches, n_hosts=args.hosts)
