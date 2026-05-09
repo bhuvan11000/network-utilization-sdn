@@ -4,7 +4,7 @@ A high-performance Software-Defined Networking (SDN) application that provides r
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 - **Dynamic Topology Support**: Deploy linear switch chains of any size with customizable host counts via CLI.
 - **Real-Time Mbps Calculation**: High-precision bandwidth throughput monitoring (RX/TX) using 3-second polling intervals.
@@ -14,7 +14,7 @@ A high-performance Software-Defined Networking (SDN) application that provides r
 
 ---
 
-## 🛠️ Architecture
+## Architecture
 
 ### Components
 1. **Controller (`monitor_controller.py`)**: 
@@ -30,7 +30,7 @@ A high-performance Software-Defined Networking (SDN) application that provides r
 
 ---
 
-## 💻 Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 - **Ubuntu 22.04** (Recommended)
@@ -50,7 +50,7 @@ pip install --no-deps "ryu @ git+https://github.com/faucetsdn/ryu.git"
 
 ---
 
-## 🚦 Execution
+## Execution
 
 ### Step 1: Start the Ryu Controller
 ```bash
@@ -70,7 +70,7 @@ Simply open `dashboard.html` in your browser. It will automatically connect to t
 
 ---
 
-## 🧪 Testing Scenarios
+## Testing Scenarios
 
 ### Test Case 1: Scalability & Topology Verification
 **Goal:** Verify that the dynamic topology correctly builds and that the terminal displays multiple switches horizontally.
@@ -101,7 +101,7 @@ Simply open `dashboard.html` in your browser. It will automatically connect to t
 
 ---
 
-## 📜 Technical Specs
+## Technical Specs
 - **Protocol**: OpenFlow 1.3
 - **Polling Interval**: 3.0 seconds
 - **Default Bandwidth**: 10 Mbps per link
